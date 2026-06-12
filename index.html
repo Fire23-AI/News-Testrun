@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PULSE — IT & Security News</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg-soft: #0f141d;
+    --surface: rgba(255,255,255,0.03);
+    --surface-hover: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #e6edf3;
+    --text-dim: #8b96a5;
+    --text-faint: #5c6773;
+    --accent: #4f9cf9;
+    --accent-glow: rgba(79,156,249,0.35);
+    --admin: #34d399;
+    --admin-bg: rgba(52,211,153,0.12);
+    --sec: #f87171;
+    --sec-bg: rgba(248,113,113,0.12);
+    --warn: #fbbf24;
+    --radius: 14px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    line-height: 1.55;
+  }
+  /* ambient background */
+  .bg-fx {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% -10%, rgba(79,156,249,0.10), transparent 60%),
+      radial-gradient(ellipse 50% 35% at 90% 0%, rgba(248,113,113,0.06), transparent 60%),
+      radial-gradient(ellipse 40% 30% at 50% 110%, rgba(52,211,153,0.05), transparent 60%);
+  }
+  .grid-fx {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .35;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 75%);
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ===== Header ===== */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    background: rgba(10,14,20,0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner {
+    display: flex; align-items: center; gap: 20px;
+    padding: 14px 0; flex-wrap: wrap;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 11px;
+    font-weight: 800; font-size: 1.18rem; letter-spacing: .04em;
+    user-select: none; white-space: nowrap;
+  }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, #4f9cf9, #8b5cf6);
+    display: grid; place-items: center;
+    box-shadow: 0 0 22px var(--accent-glow);
+    position: relative; overflow: hidden;
+  }
+  .logo-mark::after {
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: shine 4.5s ease-in-out infinite;
+  }
+  @keyframes shine { 0%,70% {transform:translateX(-100%);} 90%,100% {transform:translateX(100%);} }
+  .logo-mark svg { width: 19px; height: 19px; }
+  .logo span b { color: var(--accent); }
+
+  .search-box {
+    flex: 1; min-width: 220px; position: relative;
+  }
+  .search-box svg {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--text-faint); pointer-events: none;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 38px 10px 38px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: .92rem;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    outline: none;
+  }
+  .search-box input::placeholder { color: var(--text-faint); }
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,156,249,0.15);
+    background: rgba(79,156,249,0.04);
+  }
+  .search-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 6px;
+    display: none;
+  }
+  .search-clear:hover { color: var(--text); background: var(--surface-hover); }
+
+  .status-dot {
+    display: flex; align-items: center; gap: 7px;
+    font-size: .74rem; color: var(--text-dim);
+    font-family: var(--mono); white-space: nowrap;
+  }
+  .status-dot i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--admin);
+    box-shadow: 0 0 8px var(--admin);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  /* ===== Nav Tabs ===== */
+  nav {
+    display: flex; gap: 4px; padding-bottom: 12px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  .tab {
+    background: none; border: 1px solid transparent;
+    color: var(--text-dim); font-family: var(--font);
+    font-size: .9rem; font-weight: 600;
+    padding: 8px 18px; border-radius: 10px;
+    cursor: pointer; white-space: nowrap;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab:hover { color: var(--text); background: var(--surface-hover); }
+  .tab.active {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border-strong);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+  }
+  .tab .count {
+    font-family: var(--mono); font-size: .68rem;
+    background: var(--surface-hover); border: 1px solid var(--border);
+    padding: 1px 7px; border-radius: 20px; color: var(--text-dim);
+  }
+  .tab.active .count { color: var(--accent); border-color: rgba(79,156,249,0.3); }
+
+  /* ===== Hero / View title ===== */
+  .view-head { padding: 34px 0 6px; }
+  .view-head h1 {
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 30%, #93b8e8);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .view-head p { color: var(--text-dim); font-size: .92rem; margin-top: 4px; }
+
+  /* ===== Filter bar ===== */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 18px 0 8px;
+  }
+  .select-wrap { position: relative; }
+  .select-wrap select {
+    appearance: none; -webkit-appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--font); font-size: .82rem; font-weight: 500;
+    padding: 8px 32px 8px 14px;
+    border-radius: 9px; cursor: pointer; outline: none;
+    transition: all .2s;
+  }
+  .select-wrap select:hover, .select-wrap select:focus { border-color: var(--border-strong); color: var(--text); }
+  .select-wrap::after {
+    content: ''; position: absolute; right: 13px; top: 50%;
+    width: 7px; height: 7px;
+    border-right: 1.5px solid var(--text-faint);
+    border-bottom: 1.5px solid var(--text-faint);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+  }
+  .filter-spacer { flex: 1; }
+  .result-info { font-family: var(--mono); font-size: .74rem; color: var(--text-faint); }
+  .reset-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: .78rem; font-family: var(--font);
+    padding: 7px 14px; border-radius: 9px; cursor: pointer;
+    transition: all .2s; display: none;
+  }
+  .reset-btn:hover { color: var(--sec); border-color: rgba(248,113,113,0.4); }
+
+  /* ===== Tag chips ===== */
+  .tag-row {
+    display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 0 4px;
+  }
+  .chip {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-dim); font-family: var(--mono); font-size: .72rem;
+    padding: 4px 12px; border-radius: 20px; cursor: pointer;
+    transition: all .18s;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--text); transform: translateY(-1px); }
+  .chip.active {
+    background: rgba(79,156,249,0.14); border-color: var(--accent);
+    color: var(--accent); box-shadow: 0 0 14px rgba(79,156,249,0.18);
+  }
+  .chip-more {
+    background: none; border: none; color: var(--text-faint);
+    font-size: .72rem; font-family: var(--mono); cursor: pointer; padding: 4px 8px;
+  }
+  .chip-more:hover { color: var(--accent); }
+
+  /* ===== Articles ===== */
+  .articles { display: flex; flex-direction: column; gap: 14px; padding: 20px 0 30px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    transition: border-color .25s, background .25s, transform .25s, box-shadow .25s;
+    position: relative;
+    animation: cardIn .4s ease both;
+  }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(10px); } }
+  .card:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(0,0,0,0.35);
+  }
+  .card::before {
+    content: ''; position: absolute; left: 0; top: 18px; bottom: 18px;
+    width: 3px; border-radius: 3px;
+    background: var(--text-faint); opacity: .5;
+    transition: opacity .25s;
+  }
+  .card.cat-admin::before { background: var(--admin); }
+  .card.cat-sec::before { background: var(--sec); }
+  .card:hover::before { opacity: 1; }
+
+  .card-top {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .badge {
+    font-size: .66rem; font-weight: 700; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: 3px 10px; border-radius: 6px;
+  }
+  .badge.admin { background: var(--admin-bg); color: var(--admin); }
+  .badge.sec { background: var(--sec-bg); color: var(--sec); }
+  .badge.other { background: var(--surface-hover); color: var(--text-dim); }
+  .meta {
+    font-size: .74rem; color: var(--text-faint); font-family: var(--mono);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .meta .src { color: var(--text-dim); }
+  .imp {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: .7rem; color: var(--text-faint);
+  }
+  .imp-bar {
+    width: 52px; height: 4px; border-radius: 3px;
+    background: var(--surface-hover); overflow: hidden;
+  }
+  .imp-bar i { display: block; height: 100%; border-radius: 3px; }
+
+  .card h2 { font-size: 1.06rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; }
+  .card h2 a { color: var(--text); text-decoration: none; transition: color .2s; }
+  .card h2 a:hover { color: var(--accent); }
+  .card .summary { color: var(--text-dim); font-size: .88rem; margin-top: 7px; }
+  .card mark { background: rgba(251,191,36,0.25); color: var(--warn); border-radius: 3px; padding: 0 2px; }
+
+  .card-foot {
+    display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+    margin-top: 13px;
+  }
+  .tag {
+    font-family: var(--mono); font-size: .68rem;
+    background: rgba(79,156,249,0.07); border: 1px solid rgba(79,156,249,0.15);
+    color: #7eb3f5; padding: 2px 9px; border-radius: 5px;
+    cursor: pointer; transition: all .18s;
+  }
+  .tag:hover { background: rgba(79,156,249,0.16); border-color: var(--accent); }
+  .read-link {
+    margin-left: auto; font-size: .78rem; font-weight: 600;
+    color: var(--accent); text-decoration: none;
+    display: flex; align-items: center; gap: 5px;
+    transition: gap .2s;
+  }
+  .read-link:hover { gap: 9px; }
+  .read-link svg { width: 13px; height: 13px; }
+
+  /* archive month divider */
+  .month-divider {
+    display: flex; align-items: center; gap: 14px;
+    margin: 18px 0 4px; color: var(--text-faint);
+    font-family: var(--mono); font-size: .76rem; letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .month-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  /* load more */
+  .load-more {
+    display: block; margin: 4px auto 40px;
+    background: var(--surface); border: 1px solid var(--border-strong);
+    color: var(--text); font-family: var(--font); font-weight: 600; font-size: .88rem;
+    padding: 11px 30px; border-radius: 11px; cursor: pointer;
+    transition: all .2s;
+  }
+  .load-more:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(79,156,249,0.2); }
+  .load-more:disabled { opacity: .4; cursor: default; box-shadow: none; }
+
+  /* empty / loading / error states */
+  .state {
+    text-align: center; padding: 70px 20px; color: var(--text-faint);
+  }
+  .state .icon { font-size: 2.4rem; margin-bottom: 12px; opacity: .6; }
+  .state h3 { color: var(--text-dim); font-weight: 600; margin-bottom: 4px; }
+  .state p { font-size: .85rem; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 16px;
+    border: 3px solid var(--surface-hover);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .demo-note {
+    background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);
+    color: var(--warn); border-radius: 10px;
+    font-size: .8rem; padding: 10px 16px; margin-top: 18px;
+    display: flex; gap: 10px; align-items: center;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 26px 0 36px; margin-top: 20px;
+    color: var(--text-faint); font-size: .78rem; font-family: var(--mono);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+
+  @media (max-width: 640px) {
+    .header-inner { gap: 12px; }
+    .status-dot { display: none; }
+    .card { padding: 16px 18px; }
+    .imp { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-fx"></div>
+<div class="grid-fx"></div>
+
+<header>
+  <div class="wrap">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="2 12 6 12 9 4 15 20 18 12 22 12"/>
+          </svg>
+        </div>
+        <span>PULSE<b>.</b>NEWS</span>
+      </div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input type="search" id="search" placeholder="Suche in Titeln, Tags & Zusammenfassungen…" autocomplete="off">
+        <button class="search-clear" id="searchClear" title="Suche löschen">✕</button>
+      </div>
+      <div class="status-dot"><i></i><span id="statusText">live</span></div>
+    </div>
+    <nav id="nav">
+      <button class="tab active" data-view="all">All <span class="count" id="c-all">–</span></button>
+      <button class="tab" data-view="admin">Administration <span class="count" id="c-admin">–</span></button>
+      <button class="tab" data-view="sec">Cybersecurity <span class="count" id="c-sec">–</span></button>
+      <button class="tab" data-view="overall">Overall <span class="count" id="c-overall">–</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="view-head">
+    <h1 id="viewTitle">Aktuelle Meldungen</h1>
+    <p id="viewDesc">Alle Artikel des aktuellen Zeitraums</p>
+  </div>
+
+  <div class="filters">
+    <div class="select-wrap">
+      <select id="sortSel">
+        <option value="date">Neueste zuerst</option>
+        <option value="importance">Relevanz (Score)</option>
+        <option value="source">Quelle A–Z</option>
+      </select>
+    </div>
+    <div class="select-wrap">
+      <select id="sourceSel"><option value="">Alle Quellen</option></select>
+    </div>
+    <div class="select-wrap">
+      <select id="rangeSel">
+        <option value="">Gesamter Zeitraum</option>
+        <option value="1">Letzte 24 Stunden</option>
+        <option value="7">Letzte 7 Tage</option>
+        <option value="30">Letzte 30 Tage</option>
+      </select>
+    </div>
+    <div class="filter-spacer"></div>
+    <span class="result-info" id="resultInfo"></span>
+    <button class="reset-btn" id="resetBtn">Filter zurücksetzen</button>
+  </div>
+
+  <div class="tag-row" id="tagRow"></div>
+
+  <div class="articles" id="articles"></div>
+  <button class="load-more" id="loadMore" style="display:none">Ältere Artikel laden</button>
+</main>
+
+<footer class="wrap">
+  <span>PULSE.NEWS — static frontend · data via n8n</span>
+  <span id="lastUpdate"></span>
+</footer>
+
+<script>
+/* ============================================================
+   PULSE.NEWS — statisches Frontend
+   Datenquellen (von n8n gepflegt):
+     data/current.json      -> aktuelle Artikel (Array ODER {articles:[...]})
+     data/manifest.json     -> { "archives": ["2026-06", "2026-05", ...] }
+     data/archive/YYYY-MM.json -> Archivartikel des Monats
+   Alle Felder werden defensiv gelesen; fehlende Felder werden
+   ausgeblendet, zusätzliche ignoriert.
+   ============================================================ */
+
+const CFG = {
+  currentUrl: 'data/current.json',
+  manifestUrl: 'data/manifest.json',
+  archiveUrl: m => `data/archive/${m}.json`,
+  monthsPerLoad: 2, // wie viele Archivmonate pro "Mehr laden"
+};
+
+// Kategorie-Zuordnung (erweiterbar; Vergleich case-insensitive)
+const CATS = {
+  admin: ['systemadministration','administration','infrastruktur','infrastructure',
+          'virtualisierung','virtualization','cloud','linux','windows server','windows',
+          'netzwerke','networking','network','monitoring','storage','devops'],
+  sec:   ['schwachstellen','vulnerability','vulnerabilities','cve','cves',
+          'sicherheitswarnungen','security advisory','advisory','malware','ransomware',
+          'threat intelligence','incident response','datenlecks','data breach','breach',
+          'sicherheitsforschung','security research','cybersecurity','security']
+};
+
+const VIEWS = {
+  all:     { title: 'Aktuelle Meldungen',  desc: 'Alle Artikel des aktuellen Zeitraums' },
+  admin:   { title: 'Administration',      desc: 'Systemadministration, Infrastruktur, Cloud, DevOps & mehr' },
+  sec:     { title: 'Cybersecurity',       desc: 'Schwachstellen, CVEs, Malware, Threat Intelligence & mehr' },
+  overall: { title: 'Overall — Archiv',    desc: 'Alle jemals erfassten Artikel, chronologisch' },
+};
+
+// ---------- State ----------
+const S = {
+  view: 'all',
+  current: [],          // Artikel aus current.json
+  archive: [],          // bisher geladene Archivartikel
+  manifest: [],         // Liste der Archivmonate (neueste zuerst)
+  loadedMonths: 0,
+  q: '',
+  tag: null,
+  source: '',
+  range: '',
+  sort: 'date',
+  demo: false,
+};
+
+// ---------- Helpers (defensiv) ----------
+const $ = id => document.getElementById(id);
+const str = v => (v == null ? '' : String(v));
+const arr = v => Array.isArray(v) ? v.filter(x => x != null).map(String) : [];
+const num = v => { const n = Number(v); return isFinite(n) ? n : null; };
+
+function parseDate(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return d.toLocaleDateString('de-DE', { day:'2-digit', month:'short', year:'numeric' });
+}
+function catGroup(a) {
+  const c = str(a.category).toLowerCase();
+  const tags = arr(a.tags).map(t => t.toLowerCase());
+  const hit = list => list.some(k => c.includes(k) || tags.includes(k));
+  if (hit(CATS.sec)) return 'sec';
+  if (hit(CATS.admin)) return 'admin';
+  return 'other';
+}
+function normalize(raw) {
+  // akzeptiert Array oder { articles: [...] } oder { items: [...] }
+  const list = Array.isArray(raw) ? raw : (raw && (raw.articles || raw.items)) || [];
+  return list.filter(a => a && (a.title || a.url)).map(a => ({
+    id: str(a.id) || Math.random().toString(36).slice(2),
+    title: str(a.title) || '(ohne Titel)',
+    url: str(a.url),
+    source: str(a.source),
+    published: parseDate(a.published),
+    category: str(a.category),
+    tags: arr(a.tags),
+    summary: str(a.summary),
+    importance: num(a.importance_score),
+    _g: null,
+  })).map(a => (a._g = catGroup(a), a));
+}
+function esc(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function highlight(text, q) {
+  const e = esc(text);
+  if (!q) return e;
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return e.replace(new RegExp(`(${esc(safe)})`, 'gi'), '<mark>$1</mark>');
+}
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+// ---------- Demo-Daten (Fallback, falls keine JSON-Dateien erreichbar) ----------
+const DEMO = [
+  { id:'d1', title:'Kritische RCE-Schwachstelle in OpenSSH entdeckt — Patch verfügbar', url:'#', source:'BleepingComputer', published:'2026-06-11T08:30:00Z', category:'CVEs', tags:['CVE-2026-1337','OpenSSH','RCE','Patch'], summary:'Eine kritische Remote-Code-Execution-Lücke betrifft OpenSSH-Versionen vor 10.2. Administratoren sollten umgehend aktualisieren, ein Exploit-PoC ist bereits öffentlich.', importance_score: 98 },
+  { id:'d2', title:'Proxmox VE 9.1 veröffentlicht: SDN-Verbesserungen und neue Backup-Engine', url:'#', source:'Proxmox Blog', published:'2026-06-10T14:00:00Z', category:'Virtualisierung', tags:['Proxmox','Virtualisierung','Backup','SDN'], summary:'Das neue Release bringt überarbeitetes Software-Defined Networking, schnellere inkrementelle Backups und Verbesserungen am Cluster-Stack.', importance_score: 74 },
+  { id:'d3', title:'Ransomware-Gruppe zielt gezielt auf ESXi-Hosts in Europa', url:'#', source:'The Hacker News', published:'2026-06-10T09:15:00Z', category:'Ransomware', tags:['Ransomware','ESXi','VMware','Threat Intelligence'], summary:'Sicherheitsforscher beobachten eine neue Kampagne, die ungepatchte ESXi-Hypervisor über exponierte Management-Interfaces kompromittiert und VMs verschlüsselt.', importance_score: 91 },
+  { id:'d4', title:'Kubernetes 1.34: Sidecar-Container jetzt stabil', url:'#', source:'Kubernetes Blog', published:'2026-06-09T16:45:00Z', category:'DevOps', tags:['Kubernetes','Container','DevOps'], summary:'Mit Version 1.34 erreichen native Sidecar-Container den Stable-Status. Außerdem: Verbesserungen bei In-Place-Pod-Resizing und neue Scheduling-Features.', importance_score: 62 },
+  { id:'d5', title:'Massives Datenleck bei Cloud-Anbieter: 40 Mio. Kundendatensätze betroffen', url:'#', source:'Heise Security', published:'2026-06-09T07:20:00Z', category:'Datenlecks', tags:['Data Breach','Cloud','DSGVO'], summary:'Ein falsch konfigurierter Objektspeicher exponierte über Monate Kundendaten. Der Vorfall wirft erneut Fragen zur Shared-Responsibility-Praxis auf.', importance_score: 88 },
+  { id:'d6', title:'Debian 13 "Trixie": Was Admins beim Upgrade beachten sollten', url:'#', source:'Heise Online', published:'2026-06-08T11:00:00Z', category:'Linux', tags:['Debian','Linux','Upgrade'], summary:'Der Umstieg bringt ein neues Default-Init-Verhalten, geänderte Netzwerk-Defaults und entfernte Legacy-Pakete. Eine Checkliste für den reibungslosen Wechsel.', importance_score: 58 },
+  { id:'d7', title:'Zero-Day in weit verbreiteter Firewall-Appliance wird aktiv ausgenutzt', url:'#', source:'CISA', published:'2026-06-08T06:00:00Z', category:'Sicherheitswarnungen', tags:['Zero-Day','Firewall','CISA','KEV'], summary:'Die CISA hat die Schwachstelle in den KEV-Katalog aufgenommen. Workarounds stehen bereit, ein Patch wird in den kommenden Tagen erwartet.', importance_score: 95 },
+  { id:'d8', title:'Windows Server 2025: Hotpatching jetzt für alle Editionen verfügbar', url:'#', source:'Microsoft Tech Community', published:'2026-06-07T13:30:00Z', category:'Windows Server', tags:['Windows Server','Hotpatching','Updates'], summary:'Microsoft erweitert Hotpatching auf Standard-Editionen — Neustarts nach Sicherheitsupdates entfallen damit in den meisten Monaten.', importance_score: 70 },
+  { id:'d9', title:'Monitoring-Stack im Vergleich: Prometheus, VictoriaMetrics und Mimir 2026', url:'#', source:'Admin Magazin', published:'2026-06-06T10:00:00Z', category:'Monitoring', tags:['Monitoring','Prometheus','Observability'], summary:'Ein praxisnaher Vergleich der drei Plattformen mit Fokus auf Ressourcenverbrauch, Long-Term-Storage und Query-Performance bei großen Umgebungen.', importance_score: 49 },
+];
+const DEMO_ARCHIVE = [
+  { id:'a1', title:'Rückblick: Die größten Sicherheitsvorfälle im Mai 2026', url:'#', source:'The Record', published:'2026-05-28T09:00:00Z', category:'Threat Intelligence', tags:['Rückblick','Threat Intelligence'], summary:'Von Supply-Chain-Angriffen bis zu staatlich gesponserten Kampagnen — eine Übersicht der wichtigsten Vorfälle des Monats.', importance_score: 66 },
+  { id:'a2', title:'Ceph Squid im Produktivbetrieb: Erfahrungsbericht nach 6 Monaten', url:'#', source:'Storage Insider', published:'2026-05-15T12:00:00Z', category:'Storage', tags:['Ceph','Storage','Open Source'], summary:'Ein Praxisbericht über Migration, Performance-Tuning und Stolpersteine beim Betrieb eines 2-PB-Clusters.', importance_score: 44 },
+];
+
+// ---------- Daten laden ----------
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return r.json();
+}
+
+async function init() {
+  renderLoading();
+  try {
+    const cur = await fetchJson(CFG.currentUrl);
+    S.current = normalize(cur);
+    try {
+      const mf = await fetchJson(CFG.manifestUrl);
+      S.manifest = arr(mf && mf.archives).sort().reverse();
+    } catch { S.manifest = []; }
+    $('statusText').textContent = 'live';
+  } catch (e) {
+    // Fallback: Demo-Modus (z.B. lokale Vorschau ohne Daten)
+    S.demo = true;
+    S.current = normalize(DEMO);
+    S.manifest = ['demo'];
+    $('statusText').textContent = 'demo';
+  }
+  buildSourceFilter();
+  render();
+}
+
+async function loadMoreArchive() {
+  const btn = $('loadMore');
+  btn.disabled = true; btn.textContent = 'Lade…';
+  const next = S.manifest.slice(S.loadedMonths, S.loadedMonths + CFG.monthsPerLoad);
+  for (const m of next) {
+    try {
+      const data = S.demo ? DEMO_ARCHIVE : await fetchJson(CFG.archiveUrl(m));
+      const items = normalize(data).map(a => (a._month = m, a));
+      S.archive.push(...items);
+    } catch (e) { /* Monat fehlt/fehlerhaft -> überspringen */ }
+  }
+  S.loadedMonths += next.length;
+  btn.disabled = false; btn.textContent = 'Ältere Artikel laden';
+  buildSourceFilter();
+  render();
+}
+
+// ---------- Filter-Logik ----------
+function pool() {
+  if (S.view === 'overall') {
+    // current + Archiv, Duplikate per id entfernen
+    const seen = new Set();
+    return [...S.current, ...S.archive].filter(a => !seen.has(a.id) && seen.add(a.id));
+  }
+  if (S.view === 'admin') return S.current.filter(a => a._g === 'admin');
+  if (S.view === 'sec')   return S.current.filter(a => a._g === 'sec');
+  return S.current;
+}
+
+function applyFilters(list) {
+  let out = list;
+  if (S.q) {
+    const q = S.q.toLowerCase();
+    out = out.filter(a =>
+      a.title.toLowerCase().includes(q) ||
+      a.summary.toLowerCase().includes(q) ||
+      a.tags.some(t => t.toLowerCase().includes(q))
+    );
+  }
+  if (S.tag) out = out.filter(a => a.tags.some(t => t.toLowerCase() === S.tag.toLowerCase()));
+  if (S.source) out = out.filter(a => a.source === S.source);
+  if (S.range) {
+    const cutoff = Date.now() - Number(S.range) * 864e5;
+    out = out.filter(a => a.published && a.published.getTime() >= cutoff);
+  }
+  const by = {
+    date: (a,b) => (b.published?.getTime()||0) - (a.published?.getTime()||0),
+    importance: (a,b) => (b.importance??-1) - (a.importance??-1),
+    source: (a,b) => a.source.localeCompare(b.source),
+  };
+  return [...out].sort(by[S.sort] || by.date);
+}
+
+// ---------- Rendering ----------
+function renderLoading() {
+  $('articles').innerHTML = `<div class="state"><div class="spinner"></div><p>Lade Artikel…</p></div>`;
+}
+
+function impColor(v) {
+  if (v >= 85) return 'var(--sec)';
+  if (v >= 60) return 'var(--warn)';
+  return 'var(--admin)';
+}
+
+function cardHtml(a) {
+  const g = a._g;
+  const badgeCls = g === 'sec' ? 'sec' : g === 'admin' ? 'admin' : 'other';
+  const imp = a.importance != null ? `
+    <div class="imp" title="Importance Score: ${a.importance}">
+      <div class="imp-bar"><i style="width:${Math.min(100, Math.max(0, a.importance))}%; background:${impColor(a.importance)}"></i></div>
+      <span>${a.importance}</span>
+    </div>` : '';
+  const tags = a.tags.map(t =>
+    `<button class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
+  const link = a.url ? `
+    <a class="read-link" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">
+      Originalartikel
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>` : '';
+  return `
+  <article class="card cat-${badgeCls}">
+    <div class="card-top">
+      ${a.category ? `<span class="badge ${badgeCls}">${esc(a.category)}</span>` : ''}
+      <span class="meta">
+        ${a.source ? `<span class="src">${esc(a.source)}</span>` : ''}
+        ${a.source && a.published ? '·' : ''}
+        ${a.published ? `<time>${fmtDate(a.published)}</time>` : ''}
+      </span>
+      ${imp}
+    </div>
+    <h2>${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${highlight(a.title, S.q)}</a>` : highlight(a.title, S.q)}</h2>
+    ${a.summary ? `<p class="summary">${highlight(a.summary, S.q)}</p>` : ''}
+    <div class="card-foot">${tags}${link}</div>
+  </article>`;
+}
+
+function render() {
+  const v = VIEWS[S.view];
+  $('viewTitle').textContent = v.title;
+  $('viewDesc').textContent = v.desc;
+
+  // Tab-Zähler
+  $('c-all').textContent = S.current.length;
+  $('c-admin').textContent = S.current.filter(a => a._g === 'admin').length;
+  $('c-sec').textContent = S.current.filter(a => a._g === 'sec').length;
+  $('c-overall').textContent = S.view === 'overall'
+    ? new Set([...S.current, ...S.archive].map(a => a.id)).size
+    : '∞';
+
+  const list = applyFilters(pool());
+  buildTagChips(pool());
+
+  const el = $('articles');
+  if (!list.length) {
+    el.innerHTML = `<div class="state"><div class="icon">⌖</div><h3>Keine Artikel gefunden</h3><p>Versuche andere Suchbegriffe oder setze die Filter zurück.</p></div>`;
+  } else if (S.view === 'overall' && S.sort === 'date') {
+    // mit Monats-Trennern
+    let html = '', lastKey = '';
+    for (const a of list) {
+      const key = a.published
+        ? a.published.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+        : 'Ohne Datum';
+      if (key !== lastKey) { html += `<div class="month-divider">${esc(key)}</div>`; lastKey = key; }
+      html += cardHtml(a);
+    }
+    el.innerHTML = html;
+  } else {
+    el.innerHTML = list.map(cardHtml).join('');
+  }
+
+  // Stagger-Animation
+  el.querySelectorAll('.card').forEach((c, i) => c.style.animationDelay = `${Math.min(i, 12) * 35}ms`);
+
+  // Load-More nur im Archiv
+  const more = $('loadMore');
+  const hasMore = S.view === 'overall' && S.loadedMonths < S.manifest.length;
+  more.style.display = hasMore ? 'block' : 'none';
+
+  // Ergebnis-Info & Reset
+  const active = S.q || S.tag || S.source || S.range;
+  $('resultInfo').textContent = `${list.length} Artikel`;
+  $('resetBtn').style.display = active ? 'block' : 'none';
+
+  // Demo-Hinweis
+  let note = document.querySelector('.demo-note');
+  if (S.demo && !note) {
+    note = document.createElement('div');
+    note.className = 'demo-note';
+    note.innerHTML = '⚠ <span>Demo-Modus: <code style="font-family:var(--mono)">data/current.json</code> wurde nicht gefunden — es werden Beispieldaten angezeigt. Auf GitHub Pages mit echten n8n-Daten verschwindet dieser Hinweis automatisch.</span>';
+    document.querySelector('.view-head').after(note);
+  }
+
+  $('lastUpdate').textContent = `Stand: ${new Date().toLocaleString('de-DE')}`;
+}
+
+function buildSourceFilter() {
+  const sources = [...new Set([...S.current, ...S.archive].map(a => a.source).filter(Boolean))].sort();
+  const sel = $('sourceSel');
+  const cur = S.source;
+  sel.innerHTML = '<option value="">Alle Quellen</option>' +
+    sources.map(s => `<option value="${esc(s)}"${s === cur ? ' selected' : ''}>${esc(s)}</option>`).join('');
+}
+
+let tagsExpanded = false;
+function buildTagChips(list) {
+  const counts = {};
+  for (const a of list) for (const t of a.tags) counts[t] = (counts[t] || 0) + 1;
+  const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).map(([t]) => t);
+  const show = tagsExpanded ? sorted : sorted.slice(0, 12);
+  $('tagRow').innerHTML =
+    show.map(t => `<button class="chip${S.tag && S.tag.toLowerCase() === t.toLowerCase() ? ' active' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('') +
+    (sorted.length > 12 ? `<button class="chip-more" id="chipMore">${tagsExpanded ? 'weniger' : `+${sorted.length - 12} mehr`}</button>` : '');
+}
+
+// ---------- Events ----------
+$('nav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  S.view = btn.dataset.view;
+  if (S.view === 'overall' && S.loadedMonths === 0 && S.manifest.length) loadMoreArchive();
+  else render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+$('search').addEventListener('input', debounce(e => {
+  S.q = e.target.value.trim();
+  $('searchClear').style.display = S.q ? 'block' : 'none';
+  render();
+}, 180));
+$('searchClear').addEventListener('click', () => {
+  $('search').value = ''; S.q = '';
+  $('searchClear').style.display = 'none';
+  render();
+});
+
+$('sortSel').addEventListener('change', e => { S.sort = e.target.value; render(); });
+$('sourceSel').addEventListener('change', e => { S.source = e.target.value; render(); });
+$('rangeSel').addEventListener('change', e => { S.range = e.target.value; render(); });
+
+$('resetBtn').addEventListener('click', () => {
+  S.q = ''; S.tag = null; S.source = ''; S.range = '';
+  $('search').value = ''; $('searchClear').style.display = 'none';
+  $('sourceSel').value = ''; $('rangeSel').value = '';
+  render();
+});
+
+document.body.addEventListener('click', e => {
+  const more = e.target.closest('#chipMore');
+  if (more) { tagsExpanded = !tagsExpanded; render(); return; }
+  const tagEl = e.target.closest('[data-tag]');
+  if (tagEl) {
+    const t = tagEl.dataset.tag;
+    S.tag = (S.tag && S.tag.toLowerCase() === t.toLowerCase()) ? null : t;
+    render();
+  }
+});
+
+$('loadMore').addEventListener('click', loadMoreArchive);
+
+// Tastatur: "/" fokussiert die Suche
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== $('search')) {
+    e.preventDefault(); $('search').focus();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
