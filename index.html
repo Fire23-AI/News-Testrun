@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IT & Security News</title>
+<title>IT.NEWS — IT & Security News</title>
 <style>
   :root {
     --bg: #0a0e14;
@@ -131,7 +131,7 @@
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--admin);
     box-shadow: 0 0 8px var(--admin);
-    animation: pulse 2.5s ease-in-out infinite;
+    animation: pulse 2.4s ease-in-out infinite;
   }
   @keyframes pulse { 50% { opacity: .35; } }
 
@@ -273,7 +273,7 @@
   .badge.other { background: var(--surface-hover); color: var(--text-dim); }
   .meta {
     font-size: .74rem; color: var(--text-faint); font-family: var(--mono);
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
   .meta .src { color: var(--text-dim); }
   .imp {
@@ -303,14 +303,18 @@
     cursor: pointer; transition: all .18s;
   }
   .tag:hover { background: rgba(79,156,249,0.16); border-color: var(--accent); }
+  .links {
+    margin-left: auto; display: flex; align-items: center;
+    gap: 14px; flex-wrap: wrap;
+  }
   .read-link {
-    margin-left: auto; font-size: .78rem; font-weight: 600;
+    font-size: .78rem; font-weight: 600;
     color: var(--accent); text-decoration: none;
     display: flex; align-items: center; gap: 5px;
     transition: gap .2s;
   }
   .read-link:hover { gap: 9px; }
-  .read-link svg { width: 13px; height: 13px; }
+  .read-link svg { width: 13px; height: 13px; flex-shrink: 0; }
 
   /* archive month divider */
   .month-divider {
@@ -438,7 +442,7 @@
 </main>
 
 <footer class="wrap">
-  <span>.NEWS — static frontend · data via n8n</span>
+  <span>IT.NEWS — static frontend · data via n8n</span>
   <span id="lastUpdate"></span>
 </footer>
 
@@ -449,6 +453,13 @@
      data/current.json      -> aktuelle Artikel (Array ODER {articles:[...]})
      data/manifest.json     -> { "archives": ["2026-06", "2026-05", ...] }
      data/archive/YYYY-MM.json -> Archivartikel des Monats
+
+   Quellen-Formate (alle gültig, beliebig mischbar):
+     "source": "Heise Security"                          (eine Quelle)
+     "sources": ["Heise", "BleepingComputer"]            (mehrere, Namen)
+     "sources": [{"name":"Heise","url":"https://..."},   (mehrere, mit
+                 {"name":"BC","url":"https://..."}]       eigenen Links)
+
    Alle Felder werden defensiv gelesen; fehlende Felder werden
    ausgeblendet, zusätzliche ignoriert.
    ============================================================ */
@@ -510,27 +521,46 @@ function fmtDate(d) {
 }
 function catGroup(a) {
   const c = str(a.category).toLowerCase();
-  const tags = arr(a.tags).map(t => t.toLowerCase());
+  const tags = a.tags.map(t => t.toLowerCase());
   const hit = list => list.some(k => c.includes(k) || tags.includes(k));
   if (hit(CATS.sec)) return 'sec';
   if (hit(CATS.admin)) return 'admin';
   return 'other';
 }
+// Quellen normalisieren: Strings ODER {name, url}-Objekte -> [{name, url}]
+function normSources(a) {
+  const raw = Array.isArray(a.sources) ? a.sources : [];
+  let out = raw.map(s => {
+    if (s && typeof s === 'object') return { name: str(s.name || s.source), url: str(s.url) };
+    return { name: str(s), url: '' };
+  }).filter(s => s.name);
+  if (!out.length && a.source) out = [{ name: str(a.source), url: '' }];
+  // Hauptquelle erbt die Haupt-URL, falls sie keine eigene hat
+  if (out.length && !out[0].url && a.url) out[0].url = str(a.url);
+  return out;
+}
 function normalize(raw) {
   // akzeptiert Array oder { articles: [...] } oder { items: [...] }
   const list = Array.isArray(raw) ? raw : (raw && (raw.articles || raw.items)) || [];
-  return list.filter(a => a && (a.title || a.url)).map(a => ({
-    id: str(a.id) || Math.random().toString(36).slice(2),
-    title: str(a.title) || '(ohne Titel)',
-    url: str(a.url),
-    source: str(a.source),
-    published: parseDate(a.published),
-    category: str(a.category),
-    tags: arr(a.tags),
-    summary: str(a.summary),
-    importance: num(a.importance_score),
-    _g: null,
-  })).map(a => (a._g = catGroup(a), a));
+  return list.filter(a => a && (a.title || a.url)).map(a => {
+    const art = {
+      id: str(a.id) || Math.random().toString(36).slice(2),
+      title: str(a.title) || '(ohne Titel)',
+      url: str(a.url),
+      sources: normSources(a),
+      published: parseDate(a.published),
+      category: str(a.category),
+      tags: arr(a.tags),
+      summary: str(a.summary),
+      importance: num(a.importance_score),
+      source: '',
+      _g: null,
+    };
+    art.source = art.sources.length ? art.sources[0].name : '';
+    if (!art.url && art.sources.length) art.url = art.sources[0].url;
+    art._g = catGroup(art);
+    return art;
+  });
 }
 function esc(s) {
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -545,7 +575,7 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 
 // ---------- Demo-Daten (Fallback, falls keine JSON-Dateien erreichbar) ----------
 const DEMO = [
-  { id:'d1', title:'Kritische RCE-Schwachstelle in OpenSSH entdeckt — Patch verfügbar', url:'#', source:'BleepingComputer', published:'2026-06-11T08:30:00Z', category:'CVEs', tags:['CVE-2026-1337','OpenSSH','RCE','Patch'], summary:'Eine kritische Remote-Code-Execution-Lücke betrifft OpenSSH-Versionen vor 10.2. Administratoren sollten umgehend aktualisieren, ein Exploit-PoC ist bereits öffentlich.', importance_score: 98 },
+  { id:'d1', title:'Kritische RCE-Schwachstelle in OpenSSH entdeckt — Patch verfügbar', url:'#', sources:[{name:'BleepingComputer',url:'#bc'},{name:'Heise Security',url:'#heise'},{name:'The Hacker News',url:'#thn'}], published:'2026-06-11T08:30:00Z', category:'CVEs', tags:['CVE-2026-1337','OpenSSH','RCE','Patch'], summary:'Eine kritische Remote-Code-Execution-Lücke betrifft OpenSSH-Versionen vor 10.2. Administratoren sollten umgehend aktualisieren, ein Exploit-PoC ist bereits öffentlich.', importance_score: 98 },
   { id:'d2', title:'Proxmox VE 9.1 veröffentlicht: SDN-Verbesserungen und neue Backup-Engine', url:'#', source:'Proxmox Blog', published:'2026-06-10T14:00:00Z', category:'Virtualisierung', tags:['Proxmox','Virtualisierung','Backup','SDN'], summary:'Das neue Release bringt überarbeitetes Software-Defined Networking, schnellere inkrementelle Backups und Verbesserungen am Cluster-Stack.', importance_score: 74 },
   { id:'d3', title:'Ransomware-Gruppe zielt gezielt auf ESXi-Hosts in Europa', url:'#', source:'The Hacker News', published:'2026-06-10T09:15:00Z', category:'Ransomware', tags:['Ransomware','ESXi','VMware','Threat Intelligence'], summary:'Sicherheitsforscher beobachten eine neue Kampagne, die ungepatchte ESXi-Hypervisor über exponierte Management-Interfaces kompromittiert und VMs verschlüsselt.', importance_score: 91 },
   { id:'d4', title:'Kubernetes 1.34: Sidecar-Container jetzt stabil', url:'#', source:'Kubernetes Blog', published:'2026-06-09T16:45:00Z', category:'DevOps', tags:['Kubernetes','Container','DevOps'], summary:'Mit Version 1.34 erreichen native Sidecar-Container den Stable-Status. Außerdem: Verbesserungen bei In-Place-Pod-Resizing und neue Scheduling-Features.', importance_score: 62 },
@@ -628,7 +658,7 @@ function applyFilters(list) {
     );
   }
   if (S.tag) out = out.filter(a => a.tags.some(t => t.toLowerCase() === S.tag.toLowerCase()));
-  if (S.source) out = out.filter(a => a.source === S.source);
+  if (S.source) out = out.filter(a => a.sources.some(s => s.name === S.source));
   if (S.range) {
     const cutoff = Date.now() - Number(S.range) * 864e5;
     out = out.filter(a => a.published && a.published.getTime() >= cutoff);
@@ -652,6 +682,8 @@ function impColor(v) {
   return 'var(--admin)';
 }
 
+const arrowSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+
 function cardHtml(a) {
   const g = a._g;
   const badgeCls = g === 'sec' ? 'sec' : g === 'admin' ? 'admin' : 'other';
@@ -662,25 +694,33 @@ function cardHtml(a) {
     </div>` : '';
   const tags = a.tags.map(t =>
     `<button class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
-  const link = a.url ? `
-    <a class="read-link" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">
-      Originalartikel
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-    </a>` : '';
+
+  // Quellen-Links: hat mehr als eine Quelle eine eigene URL,
+  // gibt es pro Quelle einen Link — sonst den klassischen "Originalartikel"-Link
+  const srcLinks = a.sources.filter(s => s.url);
+  let links = '';
+  if (srcLinks.length > 1) {
+    links = `<span class="links">` + srcLinks.map(s =>
+      `<a class="read-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="Artikel bei ${esc(s.name)} öffnen">${esc(s.name)} ${arrowSvg}</a>`
+    ).join('') + `</span>`;
+  } else if (a.url) {
+    links = `<span class="links"><a class="read-link" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Originalartikel ${arrowSvg}</a></span>`;
+  }
+
   return `
   <article class="card cat-${badgeCls}">
     <div class="card-top">
       ${a.category ? `<span class="badge ${badgeCls}">${esc(a.category)}</span>` : ''}
       <span class="meta">
-        ${a.source ? `<span class="src">${esc(a.source)}</span>` : ''}
-        ${a.source && a.published ? '·' : ''}
+        ${a.sources.length ? `<span class="src">${esc(a.sources.map(s => s.name).join(' + '))}</span>` : ''}
+        ${a.sources.length && a.published ? '·' : ''}
         ${a.published ? `<time>${fmtDate(a.published)}</time>` : ''}
       </span>
       ${imp}
     </div>
     <h2>${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${highlight(a.title, S.q)}</a>` : highlight(a.title, S.q)}</h2>
     ${a.summary ? `<p class="summary">${highlight(a.summary, S.q)}</p>` : ''}
-    <div class="card-foot">${tags}${link}</div>
+    <div class="card-foot">${tags}${links}</div>
   </article>`;
 }
 
@@ -744,7 +784,7 @@ function render() {
 }
 
 function buildSourceFilter() {
-  const sources = [...new Set([...S.current, ...S.archive].map(a => a.source).filter(Boolean))].sort();
+  const sources = [...new Set([...S.current, ...S.archive].flatMap(a => a.sources.map(s => s.name)).filter(Boolean))].sort();
   const sel = $('sourceSel');
   const cur = S.source;
   sel.innerHTML = '<option value="">Alle Quellen</option>' +
